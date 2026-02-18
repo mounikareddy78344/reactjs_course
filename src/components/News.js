@@ -9,29 +9,38 @@ export default class News extends React.Component {
     this.state = {
       articles: [],
       loading: false,
-      page: 1
+      page: 1,
+      totalResults: 0
     }
+    this.apiKey = process.env.REACT_APP_NEWS_API_KEY || '70442fe3aec54043852b5299650a22f1'
+  }
+
+  getFromDate = () => {
+    const toDate = new Date();
+    const fromDate = new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return fromDate.toISOString().split('T')[0];
   }
 
   fetchNews = async (page = 1) => {
     this.setState({ loading: true });
     const pageSize = 20
-    const toDate = new Date();
-    const fromDate = new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const fromDateStr = fromDate.toISOString().split('T')[0];
+    const fromDateStr = this.getFromDate();
     
-    const url = `https://newsapi.org/v2/everything?q=tesla&from=${fromDateStr}&sortBy=publishedAt&page=${page}&pageSize=${pageSize}&apiKey=70442fe3aec54043852b5299650a22f1`;
+    const url = `https://newsapi.org/v2/everything?q=tesla&from=${fromDateStr}&sortBy=publishedAt&page=${page}&pageSize=${pageSize}&apiKey=${this.apiKey}`;
 
     try {
       const data = await fetch(url);
       const parsedData = await data.json();
       console.log("API Response:", parsedData);
-      console.log("Number of articles:", parsedData.articles ? parsedData.articles.length : 0);
       
       if (parsedData.articles && parsedData.articles.length > 0) {
-
         const articlesWithImages = parsedData.articles.filter(article => article.urlToImage);
-        this.setState({ articles: articlesWithImages.length > 0 ? articlesWithImages : parsedData.articles, page, loading: false });
+        this.setState({ 
+          articles: articlesWithImages.length > 0 ? articlesWithImages : parsedData.articles, 
+          page, 
+          loading: false,
+          totalResults: parsedData.totalResults || 0
+        });
       } else {
         console.warn("No articles found in response");
         this.setState({ articles: [], page, loading: false });
@@ -42,41 +51,61 @@ export default class News extends React.Component {
     }
   }
 
-  componentDidMount(){
+  async componentDidMount(){
+    console.log("cdm");
     this.fetchNews(1);
   }
 
-  previousPage = async () => {
+  previouspage = async () => {
+    if (this.state.page <= 1) return;
     const prevPage = Math.max(1, this.state.page - 1);
-    await this.fetchNews(prevPage);
+    console.log("previous - fetching page", prevPage);
+    this.fetchNews(prevPage);
+  } 
+
+  nextpage = async () => {
+    const newPage = this.state.page + 1;
+    console.log("next - fetching page", newPage);
+    this.fetchNews(newPage);
   }
 
-  nextPage = async () => {
-    const nextPage = this.state.page + 1;
-    await this.fetchNews(nextPage);
-  }
+
 
   render() {
     return (
       <div className="container my-3">
-        <h2 className="text-center"> My News Top Headlines</h2>
+        <h1 className="text-center"> My News Top Headlines</h1>
+        {this.state.loading && <p className="text-center">Loading news...</p>}
         <div className="row">
           {this.state.articles.map(element => {
             return (
               <div className="col-md-4" key={element.url}>
-                <Newsitem 
-                  title={element.title ? element.title.slice(0, 45) : "No Title"} 
-                  description={element.description ? element.description.slice(0, 100) : "No Description"}
+                <Newsitem
+                  title={element.title? element.title.slice(0, 50) : ""}
+                  description={element.description ? element.description.slice(0, 88) : ""}
                   imageUrl={element.urlToImage}
                   newsUrl={element.url}
-  />
+                />
               </div>
             )
           })}
         </div>
-        <div className="d-flex justify-content-center gap-3 mt-5">
-          <button disabled={this.state.page <= 1} type="button" onClick={this.previousPage} className="btn btn-dark">&larr; Previous</button>
-          <button type="button" onClick={this.nextPage} className="btn btn-dark">Next &rarr;</button>
+        <div className="container d-flex justify-content-between">
+          <button
+            disabled={this.state.page <= 1}
+            type="button"
+            className="btn btn-dark"
+            onClick={this.previouspage}
+          >
+            &larr; Previous
+          </button>
+          <button
+            type="button"
+            className="btn btn-dark"
+            onClick={this.nextpage}
+          >
+            Next &rarr;
+          </button>
         </div>
       </div>
     )
