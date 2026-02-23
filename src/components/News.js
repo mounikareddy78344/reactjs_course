@@ -10,7 +10,7 @@ export default class News extends React.Component {
       articles: [],
       loading: false,
       page: 1,
-      totalResults: 0
+  
     }
     this.apiKey = process.env.REACT_APP_NEWS_API_KEY || '70442fe3aec54043852b5299650a22f1'
   }
